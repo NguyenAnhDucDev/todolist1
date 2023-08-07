@@ -1,0 +1,154 @@
+window.addEventListener('load', () => {
+	todos = JSON.parse(localStorage.getItem('todos')) || [];
+ 	const nameInput = document.querySelector('#name');
+ 	const newTodoForm = document.querySelector('#new-todo-form');
+
+ 	const username = localStorage.getItem('username') || '';
+
+ 	nameInput.value = username;
+
+ 	nameInput.addEventListener('change', (e) => {
+ 		localStorage.setItem('username', e.target.value);
+ 	})
+
+ 	newTodoForm.addEventListener('submit', e => {
+ 		e.preventDefault();
+
+ 		const todo = {
+ 			content: e.target.elements.content.value,
+ 			category: e.target.elements.category.value,
+ 			done: false,
+ 			createdAt: new Date().getTime()
+ 		}
+
+ 		todos.push(todo);
+
+ 		localStorage.setItem('todos', JSON.stringify(todos));
+
+ 		// Reset the form
+ 		e.target.reset();
+
+ 		DisplayTodos()
+ 	})
+
+ 	DisplayTodos()
+ })
+
+ function DisplayTodos () {
+ 	const todoList = document.querySelector('#todo-list');
+ 	todoList.innerHTML = "";
+  
+ 	todos.forEach(todo => {
+ 		const todoItem = document.createElement('div');
+ 		todoItem.classList.add('todo-item');
+		todoItem.draggable = true;
+ 		const label = document.createElement('label');
+ 		const input = document.createElement('input');
+ 		const span = document.createElement('span');
+ 		const content = document.createElement('div');
+ 		const actions = document.createElement('div');
+ 		const edit = document.createElement('button');
+ 		const deleteButton = document.createElement('button');
+
+ 		input.type = 'checkbox';
+ 		input.checked = todo.done;
+ 		span.classList.add('bubble');
+ 		if (todo.category == 'personal') {
+ 			span.classList.add('personal');
+ 		} else {
+ 			span.classList.add('business');
+ 		}
+ 		content.classList.add('todo-content');
+ 		actions.classList.add('actions');
+ 		edit.classList.add('edit');
+ 		deleteButton.classList.add('delete');
+
+ 		content.innerHTML = `<input type="text" value="${todo.content}" readonly>`;
+ 		edit.innerHTML = 'Edit';
+ 		deleteButton.innerHTML = 'Delete';
+
+ 		label.appendChild(input);
+ 		label.appendChild(span);
+ 		actions.appendChild(edit);
+ 		actions.appendChild(deleteButton);
+ 		todoItem.appendChild(label);
+ 		todoItem.appendChild(content);
+ 		todoItem.appendChild(actions);
+
+ 		todoList.appendChild(todoItem);
+
+ 		if (todo.done) {
+ 			todoItem.classList.add('done');
+ 		}
+		
+ 		input.addEventListener('change', (e) => {
+ 			todo.done = e.target.checked;
+ 			localStorage.setItem('todos', JSON.stringify(todos));
+
+ 			if (todo.done) {
+ 				todoItem.classList.add('done');
+ 			} else {
+ 				todoItem.classList.remove('done');
+ 			}
+
+ 			DisplayTodos()
+
+ 		})
+
+ 		edit.addEventListener('click', (e) => {
+ 			const input = content.querySelector('input');
+ 			input.removeAttribute('readonly');
+ 			input.focus();
+ 			input.addEventListener('blur', (e) => {
+ 				input.setAttribute('readonly', true);
+ 				todo.content = e.target.value;
+ 				localStorage.setItem('todos', JSON.stringify(todos));
+ 				DisplayTodos()
+
+ 			})
+ 		})
+
+ 		deleteButton.addEventListener('click', (e) => {
+ 			todos = todos.filter(t => t != todo);
+ 			localStorage.setItem('todos', JSON.stringify(todos));
+ 			DisplayTodos()
+ 		})
+
+		todoItem.addEventListener('dragstart', (e) => {
+			e.dataTransfer.setData('text/plain', JSON.stringify(todo));
+			e.target.classList.add('dragging');
+  		});
+  
+  		todoItem.addEventListener('dragend', (e) => {
+			e.target.classList.remove('dragging');
+  		});
+  
+  		todoList.addEventListener('dragover', (e) => {
+			e.preventDefault();
+			const afterElement = getDragAfterElement(todoList, e.clientY);
+			const draggable = document.querySelector('.dragging');
+			if (afterElement == null) {
+	  			todoList.appendChild(draggable);
+			} else {
+	  			todoList.insertBefore(draggable, afterElement);
+			}
+  		});
+  
+  		function getDragAfterElement(container, y) {
+			const draggableElements = [...container.querySelectorAll('.todo-item:not(.dragging)')];
+  
+				return draggableElements.reduce(
+		(closest, child) => {
+			const box = child.getBoundingClientRect();
+			const offset = y - box.top - box.height / 2;
+			if (offset < 0 && offset > closest.offset) {
+		  		return { offset: offset, element: child };
+			} else {
+		  		return closest;
+			}
+	  	},
+	  	{ offset: Number.NEGATIVE_INFINITY }
+				).element;
+  		}
+ 	})
+}
